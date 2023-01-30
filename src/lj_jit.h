@@ -20,12 +20,18 @@
 
 #if LJ_TARGET_X86ORX64
 
-#define JIT_F_SSE3		(JIT_F_CPU << 0)
-#define JIT_F_SSE4_1		(JIT_F_CPU << 1)
-#define JIT_F_BMI2		(JIT_F_CPU << 2)
+#define JIT_F_CMOV		(JIT_F_CPU << 0)
+#define JIT_F_SSE2		(JIT_F_CPU << 1)
+#define JIT_F_SSE3		(JIT_F_CPU << 2)
+#define JIT_F_SSE4_1		(JIT_F_CPU << 3)
+#define JIT_F_P4		(JIT_F_CPU << 4)
+#define JIT_F_PREFER_IMUL		(JIT_F_CPU << 5)
+#define JIT_F_SPLIT_XMM		(JIT_F_CPU << 6)
+#define JIT_F_LEA_AGU		(JIT_F_CPU << 7)
+#define JIT_F_BMI2		(JIT_F_CPU << 8)
 
 
-#define JIT_F_CPUSTRING		"\4SSE3\6SSE4.1\4BMI2"
+#define JIT_F_CPUSTRING		"\4CMOV\4SSE2\4SSE3\6SSE4.1\2P4\3AMD\2K8\4ATOM\4BMI2"
 
 #elif LJ_TARGET_ARM
 

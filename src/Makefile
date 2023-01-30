@@ -44,10 +44,13 @@ CCOPT= -O2 -fomit-frame-pointer
 #
 # Target-specific compiler options:
 #
+# x86 only: it's recommended to compile at least for i686. Better yet,
+# compile for an architecture that has SSE2, too (-msse -msse2).
+#
 # x86/x64 only: For GCC 4.2 or higher and if you don't intend to distribute
 # the binaries to a different machine you could also use: -march=native
 #
-CCOPT_x86= -march=i686 -msse -msse2 -mfpmath=sse
+CCOPT_x86= -march=i686 -msse -mfpmath=sse
 CCOPT_x64=
 CCOPT_arm=
 CCOPT_arm64=
@@ -102,7 +105,7 @@ XCFLAGS=
 #XCFLAGS+= -DLUAJIT_ENABLE_LUA52COMPAT
 #
 # Disable the JIT compiler, i.e. turn LuaJIT into a pure interpreter.
-#XCFLAGS+= -DLUAJIT_DISABLE_JIT
+XCFLAGS+= -DLUAJIT_DISABLE_JIT
 #
 # Some architectures (e.g. PPC) can use either single-number (1) or
 # dual-number (2) mode. Uncomment one of these lines to override the
@@ -437,6 +440,11 @@ DASM_AFLAGS+= -D VER=$(subst LJ_ARCH_VERSION_,,$(filter LJ_ARCH_VERSION_%,$(subs
 ifeq (Windows,$(TARGET_SYS))
   DASM_AFLAGS+= -D WIN
 endif
+ifeq (x86,$(TARGET_LJARCH))
+  ifneq (,$(findstring __SSE2__ 1,$(TARGET_TESTARCH)))
+    DASM_AFLAGS+= -D SSE
+  endif
+else
 ifeq (x64,$(TARGET_LJARCH))
   ifeq (,$(findstring LJ_FR2 1,$(TARGET_TESTARCH)))
     DASM_ARCH= x86
@@ -463,6 +471,7 @@ ifeq (ppc,$(TARGET_LJARCH))
   ifeq (PS3,$(TARGET_SYS))
     DASM_AFLAGS+= -D PPE -D TOC
   endif
+endif
 endif
 endif
 endif

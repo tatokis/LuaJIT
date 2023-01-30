@@ -2340,6 +2340,22 @@ static void asm_setup_regsp(ASMState *as)
       }
       break;
 #endif
+/*
+    case IR_FPMATH:
+#if LJ_TARGET_X86ORX64
+      if (ir->op2 == IRFPM_EXP2) {  // May be joined to lj_vm_pow_sse.
+	ir->prev = REGSP_HINT(RID_XMM0);
+#if !LJ_64
+	if (as->evenspill < 4)  // Leave room for 16 byte scratch area.
+	  as->evenspill = 4;
+#endif
+	if (inloop)
+	  as->modset |= RSET_RANGE(RID_XMM0, RID_XMM2+1)|RID2RSET(RID_EAX);
+	continue;
+      } else if (ir->op2 <= IRFPM_TRUNC && !(as->flags & JIT_F_SSE4_1)) {
+	ir->prev = REGSP_HINT(RID_XMM0);
+>>>>>>> parent of 57768cd5... x86: Remove x87 support from interpreter.
+      */
     case IR_FPMATH:
 #if LJ_TARGET_X86ORX64
       if (ir->op2 <= IRFPM_TRUNC) {

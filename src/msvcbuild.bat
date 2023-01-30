@@ -41,7 +41,6 @@ if exist minilua.exe.manifest^
 @set DASC=vm_x86.dasc
 @set DASMFLAGS=-D WIN -D JIT -D FFI
 @set LJARCH=x86
-@set LJCOMPILE=%LJCOMPILE% /arch:SSE2
 :X64
 @if "%1" neq "nogc64" goto :GC64
 @shift

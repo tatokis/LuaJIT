@@ -649,7 +649,7 @@ JIT_PARAMDEF(JIT_PARAMINIT)
 #endif
 
 /* Arch-dependent CPU feature detection. */
-static uint32_t jit_cpudetect(void)
+static uint32_t jit_cpudetect(lua_State *L)
 {
   uint32_t flags = 0;
 #if LJ_TARGET_X86ORX64
@@ -657,16 +657,45 @@ static uint32_t jit_cpudetect(void)
   uint32_t vendor[4];
   uint32_t features[4];
   if (lj_vm_cpuid(0, vendor) && lj_vm_cpuid(1, features)) {
+#if !LJ_HASJIT
+#define JIT_F_CMOV	1
+#define JIT_F_SSE2	2
+#endif
+    flags |= ((features[3] >> 15)&1) * JIT_F_CMOV;
+    flags |= ((features[3] >> 26)&1) * JIT_F_SSE2;
+#if LJ_HASJIT
     flags |= ((features[2] >> 0)&1) * JIT_F_SSE3;
     flags |= ((features[2] >> 19)&1) * JIT_F_SSE4_1;
+    if (vendor[2] == 0x6c65746e) {  /* Intel. */
+      if ((features[0] & 0x0ff00f00) == 0x00000f00)  /* P4. */
+	flags |= JIT_F_P4;  /* Currently unused. */
+      else if ((features[0] & 0x0fff0ff0) == 0x000106c0)  /* Atom. */
+	flags |= JIT_F_LEA_AGU;
+    } else if (vendor[2] == 0x444d4163) {  /* AMD. */
+      uint32_t fam = (features[0] & 0x0ff00f00);
+      if (fam == 0x00000f00)  /* K8. */
+	flags |= JIT_F_SPLIT_XMM;
+      if (fam >= 0x00000f00)  /* K8, K10. */
+	flags |= JIT_F_PREFER_IMUL;
+    }
     if (vendor[0] >= 7) {
       uint32_t xfeatures[4];
       lj_vm_cpuid(7, xfeatures);
       flags |= ((xfeatures[1] >> 8)&1) * JIT_F_BMI2;
     }
+#endif
   }
-  /* Don't bother checking for SSE2 -- the VM will crash before getting here. */
-
+  /* Check for required instruction set support on x86 (unnecessary on x64). */
+#if LJ_TARGET_X86
+#if !defined(LUAJIT_CPU_NOCMOV)
+  if (!(flags & JIT_F_CMOV))
+    luaL_error(L, "CPU not supported");
+#endif
+#if defined(LUAJIT_CPU_SSE2)
+  if (!(flags & JIT_F_SSE2))
+    luaL_error(L, "CPU does not support SSE2 (recompile without -DLUAJIT_CPU_SSE2)");
+#endif
+#endif
 #elif LJ_TARGET_ARM
 
   int ver = LJ_ARCH_VERSION;  /* Compile-time ARM CPU detection. */
@@ -729,7 +758,12 @@ static uint32_t jit_cpudetect(void)
 static void jit_init(lua_State *L)
 {
   jit_State *J = L2J(L);
-  J->flags = jit_cpudetect() | JIT_F_ON | JIT_F_OPT_DEFAULT;
+  uint32_t flags = jit_cpudetect(L);
+#if LJ_TARGET_X86
+  /* Silently turn off the JIT compiler on CPUs without SSE2. */
+  if ((flags & JIT_F_SSE2))
+#endif
+    J->flags = flags | JIT_F_ON | JIT_F_OPT_DEFAULT;
   memcpy(J->param, jit_param_default, sizeof(J->param));
   lj_dispatch_update(G(L));
 }
@@ -738,7 +772,7 @@ static void jit_init(lua_State *L)
 LUALIB_API int luaopen_jit(lua_State *L)
 {
 #if LJ_HASJIT
-  jit_init(L);
+  jit_init(L); // FIXME should this be moved back to the bottom?
 #endif
   lua_pushliteral(L, LJ_OS_NAME);
   lua_pushliteral(L, LJ_ARCH_NAME);
